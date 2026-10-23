@@ -97,7 +97,7 @@ curl -O https://raw.githubusercontent.com/Astre06/Ravenrdp/main/reinstall.sh || 
 For server inside China:
 
 ```bash
-curl -O https://cnb.cool/bin456789/reinstall/-/git/raw/main/reinstall.sh || wget -O ${_##*/} $_
+curl -O https://raw.githubusercontent.com/Astre06/Ravenrdp/main/reinstall.sh || wget -O ${_##*/} $_
 ```
 
 ## Download (Current system is <img width="20" height="20" src="https://blogs.windows.com/wp-content/uploads/prod/2022/09/cropped-Windows11IconTransparent512-32x32.png" /> Windows)
@@ -130,7 +130,7 @@ certutil -urlcache -f -split https://raw.githubusercontent.com/Astre06/Ravenrdp/
 For server inside China:
 
 ```batch
-certutil -urlcache -f -split https://cnb.cool/bin456789/reinstall/-/git/raw/main/reinstall.bat
+certutil -urlcache -f -split https://raw.githubusercontent.com/Astre06/Ravenrdp/main/reinstall.bat
 ```
 
 ## Usage
