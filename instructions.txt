@@ -1,0 +1,211 @@
+CONVERT A LINUX VPS TO WINDOWS SERVER RDP USING ONLY SSH + PASSWORD
+====================================================================
+
+Tested on: Hostinger KVM 8 (8 vCPU / 32 GB RAM / 400 GB SSD), Debian 13
+Result:     Windows Server 2025 Standard Evaluation, RDP on TCP 3389
+Warning:    This ERASES the entire disk. Back up anything you need first.
+
+--------------------------------------------------------------------
+0. SSH INTO THE VPS (password only)
+--------------------------------------------------------------------
+
+On Windows (sshpass installed):
+
+    sshpass -p 'YOUR_ROOT_PASSWORD' ssh -o StrictHostKeyChecking=no root@YOUR_VPS_IP
+
+If SSH refuses because the host key changed after a reinstall:
+
+    ssh-keygen -R YOUR_VPS_IP
+
+Then connect again.
+
+--------------------------------------------------------------------
+1. DOWNLOAD THE REINSTALL SCRIPT
+--------------------------------------------------------------------
+
+On the VPS as root:
+
+    cd /root
+    curl -fsSL -o reinstall.sh https://raw.githubusercontent.com/bin456789/reinstall/main/reinstall.sh
+    chmod +x reinstall.sh
+
+--------------------------------------------------------------------
+2. RUN THE WINDOWS CONVERSION
+--------------------------------------------------------------------
+
+Use the exact image name "serverstandard" (one word) and pass the
+official Microsoft Windows Server 2025 Evaluation ISO URL.
+
+    ./reinstall.sh windows \
+      --image-name='windows server 2025 serverstandard' \
+      --iso='https://go.microsoft.com/fwlink/?linkid=2345730&clcid=0x409&culture=en-us&country=us' \
+      --lang=en-us \
+      --username=Administrator \
+      --password='YOUR_WINDOWS_PASSWORD' \
+      --allow-ping \
+      --rdp-port=3389
+
+Notes:
+- If you omit --iso, the script tries to auto-find the ISO and fails for
+  Windows Server 2025. Always pass --iso.
+- Accepted image names from the ISO:
+    Windows Server 2025 SERVERSTANDARDCORE
+    Windows Server 2025 SERVERSTANDARD
+    Windows Server 2025 SERVERDATACENTERCORE
+    Windows Server 2025 SERVERDATACENTER
+  The script expects lowercase with no space, e.g.:
+    windows server 2025 serverstandard
+
+The script will:
+- partition and format the disk
+- download the ISO
+- inject VirtIO drivers
+- build an unattended answer file (autounattend.xml)
+- configure RDP and firewall
+- install GRUB and stage the Windows installer
+
+At the end it prints something like:
+
+    ***** WHILE INSTALL (VIEW LOGS) *****
+    Username: Administrator
+    Password: YOUR_WINDOWS_PASSWORD
+    SSH Port: 22
+    WEB: http://YOUR_VPS_IP/RANDOM_PATH
+    ***** AFTER INSTALL *****
+    Username: Administrator
+    Password: YOUR_WINDOWS_PASSWORD
+    RDP Port: 3389
+
+Save that WEB URL. It shows live install logs.
+
+--------------------------------------------------------------------
+3. REBOOT INTO THE INSTALLER
+--------------------------------------------------------------------
+
+    reboot
+
+SSH will drop. That is expected.
+
+--------------------------------------------------------------------
+4. MONITOR THE INSTALL
+--------------------------------------------------------------------
+
+Open the WEB URL printed by the script:
+
+    http://YOUR_VPS_IP/RANDOM_PATH
+
+Wait for:
+
+    ***** DONE *****
+
+The script downloads about 7.5 GB and installs Windows. First boot
+can take 10-20 minutes. Ports 22 and 3389 may both be closed while
+Windows installs.
+
+Optional console check: if you have a provider web console, you can
+watch the VM there.
+
+--------------------------------------------------------------------
+5. CONNECT OVER RDP
+--------------------------------------------------------------------
+
+After the install finishes:
+
+    Address:  YOUR_VPS_IP:3389
+    Username: Administrator
+    Password: YOUR_WINDOWS_PASSWORD
+
+Windows Server 2025 Evaluation is valid for 180 days, then requires
+activation.
+
+--------------------------------------------------------------------
+TROUBLESHOOTING
+--------------------------------------------------------------------
+
+"Apt lock is held"
+    Another apt process is running. Wait, or find and kill it:
+        fuser /var/lib/dpkg/lock-frontend
+        kill -9 PID
+
+"REMOTE HOST IDENTIFICATION HAS CHANGED"
+    The VPS was reinstalled and has a new SSH host key.
+        ssh-keygen -R YOUR_VPS_IP
+
+"Invalid image name: windows server 2025 standard"
+    The edition must match the ISO image name. Use:
+        --image-name='windows server 2025 serverstandard'
+    or SERVERDATACENTER / SERVERSTANDARDCORE / SERVERDATACENTERCORE.
+
+"Not support find this iso"
+    You did not pass --iso. Add the Microsoft ISO URL.
+
+Console/SSH dead and installer stuck
+    Use the provider panel:
+      - Reboot, or
+      - Reinstall a Linux OS (Debian/Ubuntu), then repeat from step 1.
+
+RDP port closed after DONE
+    Windows is still on first boot. Wait longer and retry 3389.
+
+--------------------------------------------------------------------
+WHAT ACTUALLY HAPPENS UNDER THE HOOD
+--------------------------------------------------------------------
+
+Hostinger (and most providers) sell a KVM virtual machine. The OS is
+just what is installed on its virtual disk. This procedure:
+
+1. boots a small Alpine Linux environment from GRUB,
+2. partitions the virtual disk,
+3. writes the Windows installer,
+4. boots Windows Setup unattended,
+5. enables RDP and configures networking,
+6. leaves you with a normal Windows Server desktop over RDP.
+
+It is still a VPS. It is just running Windows now, and RDP replaces
+SSH as the access method.
+
+--------------------------------------------------------------------
+REFERENCE COMMAND (single block)
+--------------------------------------------------------------------
+
+    cd /root
+    curl -fsSL -o reinstall.sh https://raw.githubusercontent.com/bin456789/reinstall/main/reinstall.sh
+    chmod +x reinstall.sh
+    ./reinstall.sh windows \
+      --image-name='windows server 2025 serverstandard' \
+      --iso='https://go.microsoft.com/fwlink/?linkid=2345730&clcid=0x409&culture=en-us&country=us' \
+      --lang=en-us \
+      --username=Administrator \
+      --password='YOUR_WINDOWS_PASSWORD' \
+      --allow-ping \
+      --rdp-port=3389
+    reboot
+
+--------------------------------------------------------------------
+LOCAL FILES IN THIS FOLDER
+--------------------------------------------------------------------
+
+windows-server-2025-eval.iso   - Microsoft Windows Server 2025 Evaluation ISO (~7.7 GB)
+virtio-win.iso                 - VirtIO drivers for KVM guests (~837 MB)
+reinstall.sh                   - Main reinstall script
+trans.sh                       - Stage-2 installer/transformation script
+windows-driver-utils.sh        - Driver injection helpers
+windows.xml                    - Unattended answer file template
+windows-setup.bat              - Windows PE setup driver
+windows-resize.bat             - Partition resize helper
+windows-del-gpo.bat            - GPO cleanup
+windows-allow-ping.bat          - Firewall ping rule
+windows-change-rdp-port.bat    - RDP port changer
+windows-set-netconf.bat         - Network config
+windows-frpc.bat/.xml          - Optional frpc tunnel
+wmic.ps1                       - WMI helper
+logviewer.html/.conf           - Web progress page
+fix-eth-name.*                 - Ethernet name fix
+get-frpc-url.sh, frpc.service  - frpc helpers
+get-xda.sh, ttys.sh            - Kernel/console helpers
+debian.cfg                     - Debian preseed
+initrd-network.sh              - Initrd networking
+download-via-browser.js        - Browser download helper
+frpc-example.toml              - frpc config example
+reinstall.bat                  - Windows-side reinstall helper
+netboot.xyz*.efi/.lkrn         - Netboot fallback
