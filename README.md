@@ -732,3 +732,11 @@ bash reinstall.sh ...
 
 [![Oracle Cloud](https://github.com/bin456789/reinstall/assets/7548515/8b430ed4-8344-4f96-b4da-c2bda031cc90)](https://www.oracle.com/cloud/)
 [![DartNode](https://github.com/bin456789/reinstall/assets/7548515/435d6740-bcdd-4f3a-a196-2f60ae397f17)](https://dartnode.com/)
+
+
+## Big files (ISOs)
+
+Hosted on Mega (too large for GitHub):
+
+- Windows Server 2025 Eval ISO: https://mega.nz/file/yo4CzAqT#ZSEBR4E6zyqGU-8db-Mmj9ZG5AkGXiQytlDV6lIHH24
+- VirtIO drivers ISO: https://mega.nz/file/zhBmiDTC#scuY2c1iga5RfR2XvVCWoIEMPad9ymHN1H3qIW4D7Gw
